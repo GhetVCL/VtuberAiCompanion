@@ -1,0 +1,41 @@
+modules = ["python-3.11"]
+
+[nix]
+channel = "stable-24_05"
+packages = ["espeak-ng", "ffmpeg-full", "gettext", "libGL", "libGLU", "portaudio", "scrot", "xvfb-run"]
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Z-Waif AI VTuber Server"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "install_dependencies"
+
+[[workflows.workflow]]
+name = "Z-Waif AI VTuber Server"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pip install -r attached_assets/requirements_1750158479952.txt && python app.py"
+waitForPort = 5000
+
+[[workflows.workflow]]
+name = "install_dependencies"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pip install -r attached_assets/requirements_1750158479952.txt"
+
+[deployment]
+run = ["sh", "-c", "pip install -r attached_assets/requirements_1750158479952.txt && python app.py"]
