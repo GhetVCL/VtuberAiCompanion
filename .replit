@@ -2,7 +2,7 @@ modules = ["python-3.11"]
 
 [nix]
 channel = "stable-24_05"
-packages = ["espeak-ng", "ffmpeg-full", "gettext", "libGL", "libGLU", "portaudio", "scrot", "xvfb-run"]
+packages = ["espeak-ng", "ffmpeg-full", "gettext", "libGL", "libGLU", "portaudio", "scrot", "util-linux", "xvfb-run"]
 
 [workflows]
 runButton = "Project"
@@ -26,7 +26,7 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "pip install -r attached_assets/requirements_1750158479952.txt && python app.py"
+args = "python simple_app.py"
 waitForPort = 5000
 
 [[workflows.workflow]]
@@ -38,4 +38,8 @@ task = "shell.exec"
 args = "pip install -r attached_assets/requirements_1750158479952.txt"
 
 [deployment]
-run = ["sh", "-c", "pip install -r attached_assets/requirements_1750158479952.txt && python app.py"]
+run = ["sh", "-c", "python simple_app.py"]
+
+[[ports]]
+localPort = 5000
+externalPort = 80

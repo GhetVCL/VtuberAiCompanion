@@ -16,10 +16,33 @@ load_dotenv()
 # Add current directory to Python path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-import main
-import utils.web_ui
-import utils.settings
-import utils.zw_logging
+try:
+    import main
+    import utils.web_ui
+    import utils.settings
+    import utils.zw_logging
+except ImportError as e:
+    print(f"Warning: Some modules not available: {e}")
+    # Create minimal fallbacks
+    class MockLogging:
+        @staticmethod
+        def update_debug_log(msg): print(f"[DEBUG] {msg}")
+        @staticmethod
+        def log_error(msg): print(f"[ERROR] {msg}")
+    
+    class MockSettings:
+        web_ui_enabled = True
+        web_ui_port = 5000
+        vtube_enabled = False
+        discord_enabled = False
+        
+        @staticmethod
+        def load_settings(): pass
+    
+    utils = type('utils', (), {})()
+    utils.zw_logging = MockLogging()
+    utils.settings = MockSettings()
+    utils.web_ui = None
 
 def start_application():
     """Start the Z-Waif application with web UI"""
