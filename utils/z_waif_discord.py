@@ -15,9 +15,9 @@ import main
 
 # Discord variables
 discord_client = None
-discord_enabled = False
+discord_enabled = True
 target_channels = []
-bot_token = ""
+bot_token = "MTM4NDczNDg1OTA0OTgzMjQ5OA.G5WoFV.1r8o6kHreM5CDNazh7iAAt9s_uAmGM_T2a0De8"
 command_prefix = "!"
 last_message_time = 0
 message_cooldown = 2.0
