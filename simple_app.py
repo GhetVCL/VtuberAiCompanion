@@ -1,6 +1,6 @@
 """
-Simplified Z-Waif AI VTuber Application
-Core functionality with Gemini 2.5 Flash integration
+Enhanced Z-Waif AI VTuber Application
+Advanced memory, RAG, streaming, and Discord integration with Gemini 2.5 Flash
 """
 
 import os
@@ -11,15 +11,38 @@ import json
 import gradio as gr
 from dotenv import load_dotenv
 import google.generativeai as genai
+import asyncio
+import uuid
+from datetime import datetime
 
 # Load environment variables
 load_dotenv()
+
+# Initialize database first
+try:
+    from models import init_database
+    init_database()
+    print("Database initialized")
+except Exception as e:
+    print(f"Database initialization warning: {e}")
+
+# Import enhanced systems
+try:
+    from memory_rag_system import memory_rag_system
+    from streaming_system import streaming_manager
+    from discord_integration import discord_manager
+    print("Enhanced systems imported successfully")
+except Exception as e:
+    print(f"Warning: Enhanced systems not available: {e}")
+    memory_rag_system = None
+    streaming_manager = None
+    discord_manager = None
 
 # Configuration
 class Config:
     def __init__(self):
         self.gemini_api_key = os.getenv("GEMINI_API_KEY")
-        self.char_name = os.getenv("CHAR_NAME", "Aria")
+        self.char_name = os.getenv("CHAR_NAME", "Lily")
         self.model_name = os.getenv("GEMINI_MODEL", "gemini-2.0-flash-exp")
         self.web_ui_port = int(os.getenv("WEB_UI_PORT", "5000"))
         self.temperature = float(os.getenv("TEMPERATURE", "0.7"))
@@ -29,13 +52,14 @@ config = Config()
 
 # Character data
 character_data = {
-    "name": "Aria",
-    "description": "A friendly AI VTuber assistant powered by Gemini 2.5 Flash",
+    "name": "Lily",
+    "description": "A friendly AI VTuber powered by Gemini 2.5 Flash",
     "personality": [
         "Cheerful and enthusiastic",
         "Helpful and supportive", 
         "Curious about the world",
         "Enjoys chatting with viewers",
+        "Mischievous and funny",
         "Occasionally uses cute expressions",
         "Tech-savvy and knowledgeable",
         "Empathetic and understanding"
@@ -109,16 +133,36 @@ Guidelines:
 """
         return prompt
     
-    def send_message(self, user_input: str) -> str:
-        """Send message to Gemini and get response"""
+    def send_message(self, user_input: str, user_id: str = "web_user") -> str:
+        """Send message to Gemini with enhanced memory integration"""
         global last_response, conversation_history
         
         if not self.chat_session:
             return "Sorry, I'm having trouble connecting to my AI brain right now."
         
         try:
-            response = self.chat_session.send_message(user_input)
+            # Get enhanced context if memory system is available
+            enhanced_prompt = user_input
+            if memory_rag_system:
+                context = memory_rag_system.build_context_for_response(user_input, user_id)
+                if context:
+                    enhanced_prompt = f"{context}\nUser message: {user_input}\n\nRespond as Aria using the context above for personalization."
+            
+            response = self.chat_session.send_message(enhanced_prompt)
             last_response = response.text
+            
+            # Store in enhanced memory system if available
+            if memory_rag_system:
+                memory_rag_system.store_conversation(
+                    user_id=user_id,
+                    user_message=user_input,
+                    ai_response=last_response,
+                    platform='web'
+                )
+                
+                # Update user profile
+                context_data = memory_rag_system._extract_context(user_input, last_response)
+                memory_rag_system.update_user_profile(user_id, context_data)
             
             # Add to conversation history
             conversation_history.append([user_input, last_response])
@@ -149,28 +193,100 @@ Guidelines:
 gemini = GeminiController()
 
 def create_web_ui():
-    """Create Gradio web interface"""
+    """Create Enhanced Gradio web interface with advanced features"""
     
-    def chat_function(message, history):
+    def chat_function(message, history, user_id):
         if not message.strip():
-            return history, ""
+            return history, "", ""
         
-        # Get AI response
-        response = gemini.send_message(message)
+        # Generate unique user ID if not provided
+        if not user_id:
+            user_id = f"web_user_{uuid.uuid4().hex[:8]}"
+        
+        # Get AI response with memory integration
+        response = gemini.send_message(message, user_id)
         
         # Add to history
         history.append([message, response])
         
-        return history, ""
+        # Get memory stats for display
+        memory_info = ""
+        if memory_rag_system:
+            stats = memory_rag_system.get_conversation_stats(user_id)
+            memory_info = f"Conversations: {stats.get('total_conversations', 0)} | Memories: {stats.get('total_memories', 0)}"
+        
+        return history, "", memory_info
     
-    def regenerate_last():
-        """Regenerate last response"""
-        if conversation_history:
-            last_user_msg = conversation_history[-1][0]
-            response = gemini.send_message(f"Please provide a different response to: {last_user_msg}")
-            conversation_history[-1][1] = response
-            return conversation_history
-        return conversation_history
+    def regenerate_last(history, user_id):
+        """Regenerate last response with memory context"""
+        if not history:
+            return history, ""
+        
+        if not user_id:
+            user_id = f"web_user_{uuid.uuid4().hex[:8]}"
+        
+        last_user_msg = history[-1][0] if history else ""
+        
+        if last_user_msg:
+            # Regenerate with memory context
+            response = gemini.send_message(f"Please provide a different response to: {last_user_msg}", user_id)
+            history[-1][1] = response
+        
+        # Update memory stats
+        memory_info = ""
+        if memory_rag_system:
+            stats = memory_rag_system.get_conversation_stats(user_id)
+            memory_info = f"Conversations: {stats.get('total_conversations', 0)} | Memories: {stats.get('total_memories', 0)}"
+        
+        return history, memory_info
+    
+    def get_user_memories(user_id):
+        """Get user's stored memories"""
+        if not memory_rag_system or not user_id:
+            return "Memory system not available or no user ID provided"
+        
+        try:
+            memories = memory_rag_system.get_relevant_memories("", user_id, max_results=10)
+            if not memories:
+                return "No memories found for this user"
+            
+            memory_text = "Recent Memories:\n"
+            for i, mem in enumerate(memories, 1):
+                memory_text += f"{i}. {mem['content']} (Type: {mem['type']}, Score: {mem['importance']:.1f})\n"
+            
+            return memory_text
+        except Exception as e:
+            return f"Error retrieving memories: {e}"
+    
+    def get_system_status():
+        """Get overall system status"""
+        status_info = []
+        
+        # Gemini status
+        status_info.append(f"🤖 AI Model: {'Connected' if gemini.model else 'Disconnected'}")
+        
+        # Memory system status
+        if memory_rag_system:
+            total_stats = memory_rag_system.get_conversation_stats()
+            status_info.append(f"🧠 Memory: {total_stats.get('total_conversations', 0)} conversations, {total_stats.get('total_memories', 0)} memories")
+        else:
+            status_info.append("🧠 Memory: Not available")
+        
+        # Streaming status
+        if streaming_manager:
+            stream_stats = streaming_manager.get_active_sessions()
+            status_info.append(f"📡 Streaming: {stream_stats.get('total_connections', 0)} active connections")
+        else:
+            status_info.append("📡 Streaming: Not available")
+        
+        # Discord status
+        if discord_manager:
+            discord_status = discord_manager.get_bot_status()
+            status_info.append(f"💬 Discord: {discord_status.get('status', 'unknown')} - {discord_status.get('guilds', 0)} servers")
+        else:
+            status_info.append("💬 Discord: Not available")
+        
+        return "\n".join(status_info)
     
     # Create interface
     with gr.Blocks(

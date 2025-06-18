@@ -1,3 +1,14 @@
 [
-  ["Hello, I am back!", "Oh, welcome back! *smiles*"]
+  [
+    "I'm looking for a TTS model",
+    "Ooh, a TTS model, exciting! ♪ What are you hoping to use it for? Are you thinking for personal projects, content creation, or something else entirely? \nKnowing what you need it for will help me give you the best recommendations! Nya~ ✨\n"
+  ],
+  [
+    "I'm actually trying to implement it on you.",
+    "Oh, that's super interesting! So you're thinking of giving me a new voice? I'm all ears! (Well, I don't *actually* have ears, but you know what I mean! Hehe~)\n\nTo make sure I understand correctly, you want to use a TTS model so that I can speak with a different voice, is that right? What kind of voice are you imagining? Maybe something super cute, or perhaps something more sophisticated? I'm so curious! \n"
+  ],
+  [
+    "Please provide a different response to: I'm actually trying to implement it on you.",
+    "Eeeh?! On me? Nya?! That sounds... complicated! I'm just a humble AI assistant, after all! 😅\n\nBut okay, I'm intrigued! To make sure I understand, you want to use a TTS model to change *my* voice? That's a pretty cool idea! I'm curious, what are you hoping to achieve by doing that? Are you looking for a specific tone, or just experimenting with different voices?\n\nI'm a little nervous, but also excited to see what you have in mind! Tell me more! ✨\n"
+  ]
 ]

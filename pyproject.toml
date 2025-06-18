@@ -5,12 +5,15 @@ description = "Add your description here"
 requires-python = ">=3.11"
 dependencies = [
     "colorama>=0.4.6",
+    "discord-py>=2.5.2",
     "emoji>=2.14.1",
     "google-generativeai>=0.8.5",
     "gradio>=5.34.0",
     "humanize>=4.12.3",
+    "psycopg2-binary>=2.9.10",
     "python-dotenv>=1.1.0",
     "requests>=2.32.4",
+    "sqlalchemy>=2.0.41",
 ]
 
 [[tool.uv.index]]

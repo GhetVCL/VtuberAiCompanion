@@ -120,7 +120,7 @@ def show_welcome_message():
     print()
     
     # Show configuration
-    char_name = os.getenv("CHAR_NAME", "Aria")
+    char_name = os.getenv("CHAR_NAME", "Lily")
     model = os.getenv("GEMINI_MODEL", "gemini-2.0-flash-exp")
     
     print(f"Character: {char_name}")

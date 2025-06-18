@@ -41,7 +41,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 TT_CHOICE = os.environ.get("WHISPER_CHOICE")
-char_name = os.environ.get("CHAR_NAME", "Aria")
+char_name = os.environ.get("CHAR_NAME", "Lily")
 
 stored_transcript = "Issue with message cycling!"
 

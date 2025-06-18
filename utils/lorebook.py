@@ -98,7 +98,7 @@ def create_default_lorebook(path: str):
             {
                 "id": "ai_knowledge",
                 "title": "AI Understanding",
-                "content": "You are powered by advanced AI technology including speech recognition, natural language processing, and text-to-speech synthesis.",
+                "content": "You are powered by Gemini and features speech recognition, natural language processing, and text-to-speech synthesis.",
                 "keywords": ["ai", "artificial intelligence", "technology", "how do you work"],
                 "priority": 7,
                 "enabled": True
