@@ -296,7 +296,7 @@ def create_web_ui():
         
         gr.Markdown(f"# 🎭 {character_data['name']} - AI VTuber")
         gr.Markdown(f"*{character_data['description']}*")
-        gr.Markdown("Powered by **Gemini 2.5 Flash Experimental**")
+        gr.Markdown("Powered by **Gemini 2.5 Flash Experimental** with Advanced Memory & RAG")
         
         with gr.Row():
             with gr.Column(scale=4):
@@ -304,7 +304,8 @@ def create_web_ui():
                     value=conversation_history[-10:] if conversation_history else [],
                     height=500,
                     label="Conversation",
-                    show_label=False
+                    show_label=False,
+                    type="tuples"
                 )
                 
                 with gr.Row():
@@ -316,71 +317,113 @@ def create_web_ui():
                     )
                     send_btn = gr.Button("Send", scale=1, variant="primary")
                     regen_btn = gr.Button("🔄", scale=1, variant="secondary")
+                
+                # User ID input
+                user_id_input = gr.Textbox(
+                    placeholder="Enter your user ID (optional)",
+                    label="User ID",
+                    value="",
+                    info="Leave empty to auto-generate. Used for memory persistence."
+                )
+                
+                # Memory stats display
+                memory_stats = gr.Textbox(
+                    label="Memory Stats",
+                    value="",
+                    interactive=False,
+                    visible=bool(memory_rag_system)
+                )
             
             with gr.Column(scale=1):
-                gr.Markdown("### Settings")
+                gr.Markdown("### System Status")
                 
-                status_text = gr.Textbox(
-                    value="🟢 Connected" if gemini.model else "🔴 Disconnected",
+                system_status = gr.Textbox(
+                    value=get_system_status(),
                     label="Status",
+                    lines=6,
                     interactive=False
                 )
                 
-                model_text = gr.Textbox(
-                    value=config.model_name,
-                    label="AI Model",
-                    interactive=False
-                )
+                refresh_status_btn = gr.Button("Refresh Status", variant="secondary")
                 
-                temp_slider = gr.Slider(
-                    minimum=0.1,
-                    maximum=2.0,
-                    value=config.temperature,
-                    step=0.1,
-                    label="Temperature",
-                    interactive=False
-                )
+                gr.Markdown("### Advanced Features")
                 
-                tokens_slider = gr.Slider(
-                    minimum=50,
-                    maximum=1000,
-                    value=config.max_tokens,
-                    step=50,
-                    label="Max Tokens",
-                    interactive=False
-                )
+                with gr.Accordion("Memory & RAG", open=False):
+                    memory_display = gr.Textbox(
+                        label="Your Memories",
+                        lines=8,
+                        interactive=False,
+                        placeholder="Enter your User ID and click 'View Memories' to see stored information"
+                    )
+                    view_memories_btn = gr.Button("View Memories")
                 
-                gr.Markdown("### Character Info")
-                char_info = gr.Textbox(
-                    value=f"Name: {character_data['name']}\nPersonality: Friendly AI VTuber\nPowered by: Gemini 2.5 Flash",
-                    lines=4,
-                    label="Character",
-                    interactive=False
-                )
+                with gr.Accordion("Model Settings", open=False):
+                    temp_slider = gr.Slider(
+                        minimum=0.1,
+                        maximum=2.0,
+                        value=config.temperature,
+                        step=0.1,
+                        label="Temperature",
+                        interactive=False
+                    )
+                    
+                    tokens_slider = gr.Slider(
+                        minimum=50,
+                        maximum=1000,
+                        value=config.max_tokens,
+                        step=50,
+                        label="Max Tokens",
+                        interactive=False
+                    )
+                
+                with gr.Accordion("Character Info", open=False):
+                    char_info = gr.Textbox(
+                        value=f"Name: {character_data['name']}\nPersonality: Friendly AI VTuber\nPowered by: Gemini 2.5 Flash\nFeatures: Memory, RAG, Streaming, Discord",
+                        lines=6,
+                        label="Character",
+                        interactive=False
+                    )
+                
+                with gr.Accordion("Connection Info", open=False):
+                    gr.Markdown("**WebSocket Streaming**: Port 8765")
+                    gr.Markdown("**Discord Bot**: Available with token")
+                    gr.Markdown("**Database**: PostgreSQL with persistent memory")
         
         # Event handlers
         send_btn.click(
             chat_function,
-            inputs=[msg_input, chatbot],
-            outputs=[chatbot, msg_input]
+            inputs=[msg_input, chatbot, user_id_input],
+            outputs=[chatbot, msg_input, memory_stats]
         )
         
         msg_input.submit(
             chat_function,
-            inputs=[msg_input, chatbot],
-            outputs=[chatbot, msg_input]
+            inputs=[msg_input, chatbot, user_id_input],
+            outputs=[chatbot, msg_input, memory_stats]
         )
         
         regen_btn.click(
-            lambda: regenerate_last(),
-            outputs=[chatbot]
+            regenerate_last,
+            inputs=[chatbot, user_id_input],
+            outputs=[chatbot, memory_stats]
+        )
+        
+        refresh_status_btn.click(
+            get_system_status,
+            outputs=[system_status]
+        )
+        
+        view_memories_btn.click(
+            get_user_memories,
+            inputs=[user_id_input],
+            outputs=[memory_display]
         )
     
     return interface
 
 def main():
-    """Main application entry point"""
-    print("🌟 Starting Z-Waif AI VTuber System...")
+    """Main application entry point with enhanced features"""
+    print("🌟 Starting Enhanced Z-Waif AI VTuber System...")
     print(f"Character: {config.char_name}")
     print(f"Model: {config.model_name}")
     print(f"Port: {config.web_ui_port}")
@@ -395,7 +438,33 @@ def main():
         print("❌ Failed to initialize Gemini API")
         return
     
-    # Create and launch web interface
+    # Initialize enhanced systems
+    print("🧠 Initializing enhanced systems...")
+    
+    # Start streaming system if available
+    if streaming_manager:
+        try:
+            streaming_manager.start_background_server()
+            print("📡 Streaming server started on port 8765")
+        except Exception as e:
+            print(f"Warning: Could not start streaming server: {e}")
+    
+    # Start Discord bot if token is available
+    if discord_manager:
+        try:
+            discord_success = discord_manager.start_bot()
+            if discord_success:
+                print("💬 Discord bot started")
+            else:
+                print("💬 Discord bot not started (no token or error)")
+        except Exception as e:
+            print(f"Warning: Could not start Discord bot: {e}")
+    
+    # Display system status
+    if memory_rag_system:
+        stats = memory_rag_system.get_conversation_stats()
+        print(f"🧠 Memory system: {stats.get('total_conversations', 0)} conversations, {stats.get('total_memories', 0)} memories")
+    
     print("🌐 Starting Web Interface...")
     interface = create_web_ui()
     
